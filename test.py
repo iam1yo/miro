@@ -1,17 +1,26 @@
 import requests
 from telegram import Update
 from telegram.ext import Application, MessageHandler, ContextTypes, filters
+from telegram.request import HTTPXRequest
+
+# ==========================
+# НАСТРОЙКИ
+# ==========================
+
+TELEGRAM_TOKEN = "8669146655:AAG4qkWbxJagM-c9ArBAJUvCn5ccnbon8Og"  # Вставь токен Telegram бота
+MIRO_TOKEN = "eyJtaXJvLm9yaWdpbiI6ImV1MDEifQ_Ezkh9hNMNgqHuCfqsTUjOFL5iL0"      # Вставь токен Miro
+BOARD_ID = "uXjVH74Yyjc="        # Вставь ID доски Miro
+
+# Только этот Telegram ID имеет доступ
+MY_TELEGRAM_ID = 1051471957
 
 
-TELEGRAM_TOKEN = "8669146655:AAG4qkWbxJagM-c9ArBAJUvCn5ccnbon8Og"
-
-MIRO_TOKEN = "eyJtaXJvLm9yaWdpbiI6ImV1MDEifQ_Ezkh9hNMNgqHuCfqsTUjOFL5iL0"
-
-BOARD_ID = "uXjVH74Yyjc="
-
+# ==========================
+# ДОБАВЛЕНИЕ ЗАМЕТКИ В MIRO
+# ==========================
 
 def add_note(text):
-    url = f"https://api.miro.com/v2/boards/{BOARD_ID}/sticky_notes"
+    url = f"https://api.miro.com/v2/boards/uXjVH74Yyjc=/sticky_notes"
 
     headers = {
         "Authorization": f"Bearer {MIRO_TOKEN}",
@@ -37,17 +46,27 @@ def add_note(text):
     print(response.status_code, response.text)
 
 
+# ==========================
+# ОБРАБОТКА СООБЩЕНИЙ
+# ==========================
+
 async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    # Проверка пользователя
+    if update.effective_user.id != MY_TELEGRAM_ID:
+        await update.message.reply_text("⛔ У вас нет доступа к этому боту.")
+        return
+
     text = update.message.text
 
     add_note(text)
 
-    await update.message.reply_text(
-        "✅ Добавил на Miro"
-    )
+    await update.message.reply_text("✅ Добавил на Miro")
 
 
-from telegram.request import HTTPXRequest
+# ==========================
+# ЗАПУСК БОТА
+# ==========================
 
 request = HTTPXRequest(
     connect_timeout=120,
@@ -63,23 +82,9 @@ app = (
 )
 
 app.add_handler(
-    MessageHandler(filters.TEXT, message)
+    MessageHandler(filters.TEXT & ~filters.COMMAND, message)
 )
 
-print("Бот работает")
+print("Бот работает...")
 
-from telegram.request import HTTPXRequest
-
-request = HTTPXRequest(
-    connect_timeout=120,
-    read_timeout=120,
-    write_timeout=120
-)
-
-app.run_polling(
-    poll_interval=3
-)
-
-app.run_polling(
-    poll_interval=3
-)
+app.run_polling(poll_interval=3)
